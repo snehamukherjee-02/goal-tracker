@@ -119,6 +119,14 @@ The first time you sign in, an empty account fills itself with them automaticall
 
 ## 📝 Updates (changelog)
 
+### v3.2 — 13 November 2026
+- ☰ **Hamburger menu.** The site now opens one screen at a time:
+  🏠 Today · 📅 Calendar · 🎯 My goals · 💖 Motivation · 🎬 Videos.
+  Backup, Import and Sign out are at the bottom of the menu.
+- Sticky top bar with the page title, today's date and the save status.
+- Each screen has its own link (e.g. `…/goal-tracker/#videos`), so you can bookmark a screen.
+- The calendar fits phone screens.
+
 ### v3.1 — 13 November 2026
 - ✨ Default goals, videos, focus reminders, quotes and advice now **load automatically** on first sign-in
   from a private `starter_content` table (readable only when logged in). No manual Import needed.
