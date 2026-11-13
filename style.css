@@ -220,7 +220,10 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
 @media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
 
 .page > .card:last-child, .page > div > .card { margin-bottom: 16px; }
-.page.grid { margin-bottom: 16px; }
+.page.grid { margin-bottom: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.grid > * { min-width: 0; }
+@media (max-width: 760px) { .page.grid { grid-template-columns: minmax(0, 1fr); } }
+html, body { overflow-x: hidden; }
 .page.grid > div > .card { margin-bottom: 0; height: 100%; }
 
 .auth-form { display: flex; flex-direction: column; align-items: stretch; gap: 10px; text-align: left; }
