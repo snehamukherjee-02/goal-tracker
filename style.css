@@ -170,6 +170,19 @@ textarea, input[type=text], select {
 
 [hidden] { display: none !important; }
 
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form input {
+  width: 100%; font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+}
+.auth-links { display: flex; justify-content: space-between; font-size: .9rem; }
+.auth-links a { color: var(--accent); text-decoration: none; }
+.auth-links a:hover { text-decoration: underline; }
+.auth-msg { color: var(--done); margin: 0; font-size: .9rem; min-height: 0; }
+.small-text { font-size: .8rem; }
+.welcome { background: var(--accent-soft); border-color: transparent; }
+.welcome code { font-size: .85em; overflow-wrap: anywhere; }
+
 .add-form input.short { flex: 0 1 200px; }
 .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .video-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg); }

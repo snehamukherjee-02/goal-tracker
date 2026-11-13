@@ -7,36 +7,78 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Lock screen -->
-  <section id="lockScreen" class="lock">
-    <form id="lockForm" class="card lock-card">
-      <div class="lock-icon">🔒</div>
+  <!-- ================= Login screen ================= -->
+  <section id="authScreen" class="lock">
+    <div class="card lock-card">
+      <div class="lock-icon">🎯</div>
       <h1>My Goal Tracker</h1>
-      <p class="hint">This page is private. Enter your password to unlock.</p>
-      <input type="password" id="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
-      <label class="remember"><input type="checkbox" id="remember"> Remember on this device (not on shared computers)</label>
-      <button type="submit" id="unlockBtn">Unlock</button>
-      <p class="lock-error" id="lockError" role="alert"></p>
-    </form>
+
+      <!-- Sign in -->
+      <form id="signInForm" class="auth-form">
+        <p class="hint">Sign in to see your goals on any device.</p>
+        <input type="email" id="siEmail" autocomplete="email" placeholder="Email" required>
+        <input type="password" id="siPassword" autocomplete="current-password" placeholder="Password" required>
+        <button type="submit">Sign in</button>
+        <div class="auth-links">
+          <a href="#" data-mode="forgot">Forgot password?</a>
+          <a href="#" data-mode="signup">Create account</a>
+        </div>
+      </form>
+
+      <!-- Create account -->
+      <form id="signUpForm" class="auth-form" hidden>
+        <p class="hint">Create your account. You'll get an email to confirm it.</p>
+        <input type="email" id="suEmail" autocomplete="email" placeholder="Email" required>
+        <input type="password" id="suPassword" autocomplete="new-password" placeholder="Password (8+ characters)" minlength="8" required>
+        <button type="submit">Create account</button>
+        <div class="auth-links"><a href="#" data-mode="signin">Back to sign in</a></div>
+      </form>
+
+      <!-- Forgot password -->
+      <form id="forgotForm" class="auth-form" hidden>
+        <p class="hint">Enter your email and we'll send you a link to reset your password.</p>
+        <input type="email" id="fpEmail" autocomplete="email" placeholder="Email" required>
+        <button type="submit">Send reset link</button>
+        <div class="auth-links"><a href="#" data-mode="signin">Back to sign in</a></div>
+      </form>
+
+      <!-- Set new password (after clicking the email link) -->
+      <form id="newPassForm" class="auth-form" hidden>
+        <p class="hint">Choose a new password.</p>
+        <input type="password" id="npPassword" autocomplete="new-password" placeholder="New password (8+ characters)" minlength="8" required>
+        <input type="password" id="npPassword2" autocomplete="new-password" placeholder="Type it again" minlength="8" required>
+        <button type="submit">Save new password</button>
+      </form>
+
+      <p class="auth-msg" id="authMsg" role="status"></p>
+      <p class="lock-error" id="authError" role="alert"></p>
+    </div>
   </section>
 
+  <!-- ================= App ================= -->
   <div id="app" hidden>
   <header class="top">
     <div>
       <h1>My Life Goals</h1>
       <p class="sub" id="todayLabel"></p>
+      <p class="sub small-text"><span id="userEmail"></span> · <span id="syncStatus">Saved ✓</span></p>
     </div>
     <div class="top-actions">
-      <button class="ghost" id="lockBtn" title="Lock the tracker and forget this device">🔒 Lock</button>
       <button class="ghost" id="exportBtn" title="Download a backup of your data">Backup</button>
-      <label class="ghost file-btn" title="Restore from a backup file">
-        Restore<input type="file" id="importInput" accept="application/json" hidden>
+      <label class="ghost file-btn" title="Import goals or restore a backup file">
+        Import<input type="file" id="importInput" accept="application/json,.json" hidden>
       </label>
+      <button class="ghost" id="signOutBtn">Sign out</button>
     </div>
   </header>
 
+  <section class="card welcome" id="welcomeBanner" hidden>
+    <strong>👋 Welcome!</strong> Your account is empty. Click <b>Import</b> (top right) and choose your goals file
+    (<code>goal-tracker\private\content.json</code>) to load your goals, messages and videos, or add goals yourself below.
+  </section>
+
   <!-- Focus reminder -->
-  <section class="focus-banner" id="focusBanner">
+  <section class="focus-banner">
     <div class="focus-icon">🎯</div>
     <div>
       <strong>Today's focus reminder</strong>
@@ -123,10 +165,11 @@
     <ol class="goal-list" id="goalList"></ol>
   </section>
 
-  <footer>Your progress is saved encrypted in this browser on this device. Use <b>Backup</b> / <b>Restore</b> to move it between devices.</footer>
+  <footer>Your progress is saved to your account, so sign in on any device to see it.</footer>
   </div>
 
-  <script src="content.enc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

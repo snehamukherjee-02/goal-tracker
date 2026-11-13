@@ -1,58 +1,58 @@
 /* ===========================================================
-   My Goal Tracker — password-protected & encrypted
+   My Goal Tracker — login + cloud sync (Supabase)
    -----------------------------------------------------------
-   • Your goals, focus reminders, quotes and advice live ONLY in
-     content.enc.js, encrypted with AES-256-GCM. The key comes from
-     your password (PBKDF2-SHA256, 600,000 iterations).
-   • Your daily ticks and notes are saved encrypted in this
-     browser's storage, with a key from the same password.
-   • No plain-text personal data is ever in this public code.
+   • Sign in with email + password on any device.
+   • All data lives in one row per user in the `tracker_state`
+     table, protected by Row Level Security (only you can read it).
+   • Password reset by email (Supabase Auth, sent via SMTP).
    =========================================================== */
 
-const STATE_KEY = "myGoalTracker.enc";      // encrypted progress
-const REMEMBER_KEY = "myGoalTracker.keys";  // optional "remember on this device"
-const LEGACY_KEY = "myGoalTracker.v1";      // old unencrypted version (migrated)
-const LOCAL_ITER = 600000;
+const $ = id => document.getElementById(id);
+const CFG = window.APP_CONFIG || {};
+const SITE_URL = location.origin + location.pathname;   // where email links come back to
+
+/* ---------- Generic (non-personal) fallback messages ---------- */
+const GENERIC_FOCUS = [
+  "Your energy is limited. Spend it on your goals today.",
+  "Close the chat. Open your goals. Future you is waiting.",
+  "You can't control other people. You CAN control what you do today."
+];
+const GENERIC_QUOTES = [
+  "Small steps every day add up to big results.",
+  "Your only competition is who you were yesterday.",
+  "Dream big. Start small. Act now."
+];
+const GENERIC_ADVICE = [
+  "Pick 2–3 goals for today and do one small action for each.",
+  "Missed a day? No guilt. Just don't miss two days in a row."
+];
+
+function cheerFor(count, total) {
+  if (count === 0) return "";
+  const pct = total ? count / total : 0;
+  if (pct >= 1) return "🏆 You worked on EVERY goal today. Unstoppable!";
+  if (pct >= 0.6) return "🌟 Amazing day! You're building your dream life.";
+  if (pct >= 0.3) return "💪 Great work. Keep the momentum going!";
+  if (count === 1) return "✨ One step is still progress. Proud of you!";
+  return "🌸 Nice! Every tick is a vote for your future self.";
+}
 
 /* ===========================================================
-   Crypto helpers (Web Crypto API)
+   State
    =========================================================== */
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+let sb = null;          // Supabase client
+let user = null;        // signed-in user
+let state = null;       // { goals, log, notes, videos, focus, quotes, advice }
+let lastUpdated = null; // updated_at of the row we loaded / saved
 
-async function deriveKey(password, salt, iterations) {
-  const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
-    base, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
-  );
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
-async function encryptText(key, text) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(text));
-  return { iv: b64e(iv), data: b64e(data) };
-}
-async function decryptText(key, ivB64, dataB64) {
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(ivB64) }, key, b64d(dataB64));
-  return dec.decode(plain);
-}
-async function exportKey(key) { return b64e(await crypto.subtle.exportKey("raw", key)); }
-async function importKey(b64) {
-  return crypto.subtle.importKey("raw", b64d(b64), { name: "AES-GCM" }, true, ["encrypt", "decrypt"]);
+function emptyState() {
+  return { goals: [], log: {}, notes: {}, videos: [], focus: [], quotes: [], advice: [] };
 }
 
-function storageGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-function storageSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
-function storageDel(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
-
-/* ===========================================================
-   Content (filled in after unlocking)
-   =========================================================== */
-let DEFAULT_GOALS = [], FOCUS_MESSAGES = [], QUOTES = [], ADVICE = [], DEFAULT_VIDEOS = [];
-
-/* Get the 11-character video ID from any YouTube link (youtu.be, watch?v=, shorts, embed, live) */
+/* YouTube link → 11-char video id (youtu.be, watch?v=, shorts, embed, live) */
 function youtubeId(input) {
   const s = String(input || "").trim();
   if (/^[\w-]{11}$/.test(s)) return s;
@@ -71,214 +71,206 @@ function youtubeId(input) {
   return id && /^[\w-]{11}$/.test(id) ? id : null;
 }
 
-function ensureVideos() {
-  if (!Array.isArray(state.videos)) {
-    state.videos = DEFAULT_VIDEOS
-      .map(v => ({ id: uid(), yt: youtubeId(v.url), title: v.title || "" }))
-      .filter(v => v.yt);
-    return true;
-  }
-  return false;
-}
-
-function cheerFor(count, total) {
-  if (count === 0) return "";
-  const pct = total ? count / total : 0;
-  if (pct >= 1) return "🏆 You worked on EVERY goal today. Unstoppable!";
-  if (pct >= 0.6) return "🌟 Amazing day! You're building your dream life.";
-  if (pct >= 0.3) return "💪 Great work. Keep the momentum going!";
-  if (count === 1) return "✨ One step is still progress. Proud of you!";
-  return "🌸 Nice! Every tick is a vote for your future self.";
-}
-
-/* ===========================================================
-   State
-   =========================================================== */
-let state = null;
-let localKey = null;
-let localSalt = null;
-
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-function defaultState() {
-  const now = dateKey(new Date());
+/* Accepts saved state, an old backup file, or the starter content file
+   ({ goals:[{title,category,tip}], focus, quotes, advice, videos:[{url,title}] }) */
+function normalize(s) {
+  if (!s || typeof s !== "object" || !Array.isArray(s.goals)) return null;
+  const today = todayKey();
+  const strArr = a => Array.isArray(a) ? a.filter(x => typeof x === "string" && x.trim()) : [];
   return {
-    goals: DEFAULT_GOALS.map(g => ({
-      id: uid(), title: g.title, category: g.category, tip: g.tip || "",
-      achieved: false, achievedDate: null, createdAt: now
+    goals: s.goals.filter(g => g && g.title).map(g => ({
+      id: g.id || uid(),
+      title: String(g.title),
+      category: g.category || "Self",
+      tip: g.tip || "",
+      achieved: !!g.achieved,
+      achievedDate: g.achievedDate || null,
+      createdAt: g.createdAt || today
     })),
-    log: {},
-    notes: {}
+    log: s.log && typeof s.log === "object" ? s.log : {},
+    notes: s.notes && typeof s.notes === "object" ? s.notes : {},
+    videos: (Array.isArray(s.videos) ? s.videos : []).map(v => ({
+      id: v.id || uid(), yt: v.yt || youtubeId(v.url), title: v.title || ""
+    })).filter(v => v.yt),
+    focus: strArr(s.focus),
+    quotes: strArr(s.quotes),
+    advice: strArr(s.advice)
   };
 }
-function normalize(s) {
-  if (!s || !Array.isArray(s.goals)) return null;
-  return { goals: s.goals, log: s.log || {}, notes: s.notes || {}, videos: s.videos };
-}
 
-let saveChain = Promise.resolve();
-function saveState() {
-  if (!localKey) return;
-  const snapshot = JSON.stringify(state);
-  saveChain = saveChain.then(async () => {
-    const { iv, data } = await encryptText(localKey, snapshot);
-    storageSet(STATE_KEY, JSON.stringify({ v: 1, salt: b64e(localSalt), iv, data }));
-  }).catch(() => {});
-}
+const focusList = () => state.focus.length ? state.focus : GENERIC_FOCUS;
+const quoteList = () => state.quotes.length ? state.quotes : GENERIC_QUOTES;
+const adviceList = () => state.advice.length ? state.advice : GENERIC_ADVICE;
 
 /* ===========================================================
-   Lock screen / unlock
+   Cloud sync
    =========================================================== */
-const $ = id => document.getElementById(id);
+let saveTimer = null, dirty = false, saving = false;
 
-function showLockError(msg) {
-  $("lockError").textContent = msg;
-  $("unlockBtn").disabled = false;
-  $("unlockBtn").textContent = "Unlock";
+function setSync(text) { $("syncStatus").textContent = text; }
+
+function saveState() {
+  dirty = true;
+  setSync("Saving…");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 700);
 }
 
-async function loadContent(contentKey) {
-  const ec = window.ENCRYPTED_CONTENT;
-  const content = JSON.parse(await decryptText(contentKey, ec.iv, ec.data));
-  DEFAULT_GOALS = content.goals || [];
-  FOCUS_MESSAGES = content.focus && content.focus.length ? content.focus : ["Focus on your goals today."];
-  QUOTES = content.quotes && content.quotes.length ? content.quotes : ["Small steps every day."];
-  ADVICE = content.advice && content.advice.length ? content.advice : ["Do one small step for a goal today."];
-  DEFAULT_VIDEOS = Array.isArray(content.videos) ? content.videos : [];
+async function flush() {
+  if (!user) return;
+  if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); return; }
+  saving = true;
+  dirty = false;
+  const now = new Date().toISOString();
+  const { error } = await sb.from("tracker_state")
+    .upsert({ user_id: user.id, data: state, updated_at: now });
+  saving = false;
+  if (error) {
+    dirty = true;
+    setSync(navigator.onLine ? "⚠️ Not saved, retrying…" : "📴 Offline, will save when back online");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 5000);
+    return;
+  }
+  lastUpdated = now;
+  if (dirty) flush(); else setSync("Saved ✓");
 }
 
-async function loadLocalState(rec) {
-  if (rec) {
-    state = normalize(JSON.parse(await decryptText(localKey, rec.iv, rec.data)));
-  }
-  if (!state) {
-    // migrate data from the old unencrypted version, if any
-    try { state = normalize(JSON.parse(storageGet(LEGACY_KEY))); } catch (e) { state = null; }
-    if (!state) state = defaultState();
-    ensureVideos();
-    saveState();
-    await saveChain;
-    storageDel(LEGACY_KEY);
-  }
-  if (ensureVideos()) saveState();
-}
-
-function readLocalRec() {
-  try { return JSON.parse(storageGet(STATE_KEY)); } catch (e) { return null; }
-}
-
-async function unlockWithPassword(password, remember) {
-  const ec = window.ENCRYPTED_CONTENT;
-  let contentKey;
-  try {
-    contentKey = await deriveKey(password, b64d(ec.salt), ec.iter);
-    await loadContent(contentKey);
-  } catch (e) {
-    throw new Error("Wrong password. Try again.");
-  }
-
-  const rec = readLocalRec();
-  localSalt = rec ? b64d(rec.salt) : crypto.getRandomValues(new Uint8Array(16));
-  localKey = await deriveKey(password, localSalt, LOCAL_ITER);
-  try {
-    await loadLocalState(rec);
-  } catch (e) {
-    // Progress on this device was saved under an older password.
-    const old = prompt("Your saved progress on this device uses your OLD password.\nEnter the old password to keep it (Cancel = start fresh on this device):");
-    if (old !== null) {
-      try {
-        const oldKey = await deriveKey(old, localSalt, LOCAL_ITER);
-        state = normalize(JSON.parse(await decryptText(oldKey, rec.iv, rec.data)));
-      } catch (err) {
-        throw new Error("Old password didn't work. Progress was NOT changed. Reload to try again.");
-      }
-    } else {
-      if (!confirm("Start fresh on this device? Your old encrypted progress here will be replaced.")) {
-        throw new Error("Unlock cancelled. Nothing was changed.");
-      }
-      state = defaultState();
-    }
-    // re-encrypt with the new password
-    localSalt = crypto.getRandomValues(new Uint8Array(16));
-    localKey = await deriveKey(password, localSalt, LOCAL_ITER);
-    saveState();
-    await saveChain;
-  }
-
-  if (remember) {
-    storageSet(REMEMBER_KEY, JSON.stringify({
-      c: await exportKey(contentKey), l: await exportKey(localKey),
-      cs: ec.salt, ls: b64e(localSalt)
-    }));
+async function loadRemote() {
+  const { data, error } = await sb.from("tracker_state")
+    .select("data, updated_at").eq("user_id", user.id).maybeSingle();
+  if (error) throw error;
+  if (data) {
+    state = normalize(data.data) || emptyState();
+    lastUpdated = data.updated_at;
   } else {
-    storageDel(REMEMBER_KEY);
+    state = emptyState();
+    lastUpdated = null;
   }
 }
 
-async function tryRemembered() {
-  const ec = window.ENCRYPTED_CONTENT;
-  let r;
-  try { r = JSON.parse(storageGet(REMEMBER_KEY)); } catch (e) { r = null; }
-  if (!r || r.cs !== ec.salt) return false;
-  try {
-    await loadContent(await importKey(r.c));
-    const rec = readLocalRec();
-    if (rec && rec.salt !== r.ls) return false;
-    localSalt = b64d(r.ls);
-    localKey = await importKey(r.l);
-    await loadLocalState(rec);
-    return true;
-  } catch (e) {
-    storageDel(REMEMBER_KEY);
-    return false;
-  }
-}
-
-function showApp() {
-  $("lockScreen").hidden = true;
-  $("app").hidden = false;
-  focusIndex = dayOfYear(new Date()) % FOCUS_MESSAGES.length;
-  quoteIndex = dayOfYear(new Date()) % QUOTES.length;
+/* When you come back to the tab, pull changes made on another device */
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible" || !user || dirty || saving) return;
+  const { data, error } = await sb.from("tracker_state")
+    .select("data, updated_at").eq("user_id", user.id).maybeSingle();
+  if (error || !data || data.updated_at === lastUpdated || dirty || saving) return;
+  state = normalize(data.data) || state;
+  lastUpdated = data.updated_at;
   renderAll();
-}
-
-async function boot() {
-  if (!window.crypto || !crypto.subtle) {
-    showLockError("This browser can't decrypt. Open the page over https (the GitHub Pages link) in a modern browser.");
-    $("unlockBtn").disabled = true;
-    return;
-  }
-  if (!window.ENCRYPTED_CONTENT) {
-    showLockError("Encrypted content not found. Run: node tools/encrypt.mjs");
-    $("unlockBtn").disabled = true;
-    return;
-  }
-  if (await tryRemembered()) { showApp(); return; }
-  $("password").focus();
-}
-
-$("lockForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const pw = $("password").value;
-  if (!pw) return;
-  $("lockError").textContent = "";
-  $("unlockBtn").disabled = true;
-  $("unlockBtn").textContent = "Unlocking…";
-  try {
-    await unlockWithPassword(pw, $("remember").checked);
-    $("password").value = "";
-    showApp();
-  } catch (err) {
-    showLockError(err.message);
-    $("password").select();
-  }
+  setSync("Updated from another device ✓");
 });
 
-$("lockBtn").onclick = () => {
-  storageDel(REMEMBER_KEY);
-  location.reload();
+window.addEventListener("online", () => { if (dirty) flush(); });
+window.addEventListener("beforeunload", e => {
+  if (dirty || saving) { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* ===========================================================
+   Auth screens
+   =========================================================== */
+const FORMS = { signin: "signInForm", signup: "signUpForm", forgot: "forgotForm", newpass: "newPassForm" };
+
+function showMode(mode) {
+  Object.entries(FORMS).forEach(([m, id]) => { $(id).hidden = m !== mode; });
+  authMsg(""); authErr("");
+}
+function authMsg(t) { $("authMsg").textContent = t; }
+function authErr(t) { $("authError").textContent = t; }
+function busy(form, on, label) {
+  const b = form.querySelector("button[type=submit]");
+  if (on) { b.dataset.label = b.textContent; b.textContent = label || "Please wait…"; b.disabled = true; }
+  else { b.textContent = b.dataset.label || b.textContent; b.disabled = false; }
+}
+
+document.querySelectorAll("[data-mode]").forEach(a => a.addEventListener("click", e => {
+  e.preventDefault();
+  showMode(a.dataset.mode);
+}));
+
+$("signInForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  authErr(""); busy(e.target, true, "Signing in…");
+  const { error } = await sb.auth.signInWithPassword({
+    email: $("siEmail").value.trim(), password: $("siPassword").value
+  });
+  busy(e.target, false);
+  if (error) authErr(error.message === "Invalid login credentials" ? "Wrong email or password." : error.message);
+  else $("siPassword").value = "";
+});
+
+$("signUpForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  authErr(""); busy(e.target, true, "Creating…");
+  const { data, error } = await sb.auth.signUp({
+    email: $("suEmail").value.trim(), password: $("suPassword").value,
+    options: { emailRedirectTo: SITE_URL }
+  });
+  busy(e.target, false);
+  if (error) { authErr(error.message); return; }
+  $("suPassword").value = "";
+  if (!data.session) authMsg("✅ Account created! Check your email and click the confirmation link, then sign in.");
+});
+
+$("forgotForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  authErr(""); busy(e.target, true, "Sending…");
+  const { error } = await sb.auth.resetPasswordForEmail($("fpEmail").value.trim(), { redirectTo: SITE_URL });
+  busy(e.target, false);
+  if (error) authErr(error.message);
+  else authMsg("📧 If that email has an account, a reset link is on its way. Check your inbox (and spam).");
+});
+
+let inRecovery = false;
+$("newPassForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const p1 = $("npPassword").value, p2 = $("npPassword2").value;
+  if (p1 !== p2) { authErr("Passwords don't match."); return; }
+  authErr(""); busy(e.target, true, "Saving…");
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  busy(e.target, false);
+  if (error) { authErr(error.message); return; }
+  $("npPassword").value = ""; $("npPassword2").value = "";
+  inRecovery = false;
+  alert("✅ Password changed! You're signed in.");
+  const { data } = await sb.auth.getSession();
+  if (data.session) enterApp(data.session.user);
+});
+
+$("signOutBtn").onclick = async () => {
+  if (dirty) await flush();
+  await sb.auth.signOut();
 };
+
+function showAuth() {
+  user = null; state = null;
+  $("app").hidden = true;
+  $("authScreen").hidden = false;
+}
+
+let entering = false;
+async function enterApp(u) {
+  if (inRecovery || entering) return;
+  if (user && user.id === u.id && state) return;
+  entering = true;
+  user = u;
+  try {
+    await loadRemote();
+  } catch (err) {
+    entering = false;
+    user = null;
+    authErr("Couldn't load your data: " + err.message);
+    return;
+  }
+  entering = false;
+  $("authScreen").hidden = true;
+  $("app").hidden = false;
+  $("userEmail").textContent = u.email;
+  setSync("Saved ✓");
+  focusIndex = dayOfYear(new Date()) % focusList().length;
+  quoteIndex = dayOfYear(new Date()) % quoteList().length;
+  renderAll();
+}
 
 /* ===========================================================
    Date helpers
@@ -414,10 +406,11 @@ function renderGoals() {
 }
 
 function renderMotivation() {
-  $("focusText").textContent = FOCUS_MESSAGES[focusIndex];
-  $("quoteText").textContent = QUOTES[quoteIndex];
+  const F = focusList(), Q = quoteList(), A = adviceList();
+  $("focusText").textContent = F[focusIndex % F.length];
+  $("quoteText").textContent = Q[quoteIndex % Q.length];
 
-  const general = ADVICE[dayOfYear(new Date()) % ADVICE.length];
+  const general = A[dayOfYear(new Date()) % A.length];
   const open = state.goals.filter(g => !g.achieved);
   let personal = "";
   if (open.length) {
@@ -431,7 +424,7 @@ function renderMotivation() {
 }
 
 function renderVideos() {
-  const vids = state.videos || [];
+  const vids = state.videos;
   $("videoGrid").innerHTML = vids.length === 0
     ? `<p class="hint">No videos yet. Paste a YouTube link above to add one.</p>`
     : vids.map(v => `
@@ -455,12 +448,13 @@ function renderVideos() {
 
 function renderAll() {
   $("todayLabel").textContent = prettyDate(todayKey());
-  renderVideos();
+  $("welcomeBanner").hidden = state.goals.length > 0;
   renderStats();
   renderCalendar();
   renderDaily();
   renderGoals();
   renderMotivation();
+  renderVideos();
 }
 
 /* ===========================================================
@@ -570,12 +564,11 @@ $("videoGrid").addEventListener("click", e => {
   }
 });
 
-$("newFocusBtn").onclick = () => { focusIndex = (focusIndex + 1) % FOCUS_MESSAGES.length; renderMotivation(); };
-$("newQuoteBtn").onclick = () => { quoteIndex = (quoteIndex + 1) % QUOTES.length; renderMotivation(); };
+$("newFocusBtn").onclick = () => { focusIndex++; renderMotivation(); };
+$("newQuoteBtn").onclick = () => { quoteIndex++; renderMotivation(); };
 
-/* ---------- Backup / restore (backup file is NOT encrypted, keep it safe) ---------- */
+/* ---------- Backup / import ---------- */
 $("exportBtn").onclick = () => {
-  if (!confirm("The backup file is readable (not encrypted). Keep it private. Download it?")) return;
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -589,18 +582,17 @@ $("importInput").addEventListener("change", e => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try {
-      const s = normalize(JSON.parse(reader.result));
-      if (!s) throw new Error("bad file");
-      if (!confirm("Replace your current data on this device with this backup?")) return;
-      state = s;
-      ensureVideos();
-      saveState(); renderAll();
-      alert("Backup restored ✅");
-    } catch (err) {
-      alert("That file doesn't look like a Goal Tracker backup.");
-    }
     e.target.value = "";
+    let s;
+    try { s = normalize(JSON.parse(reader.result)); } catch (err) { s = null; }
+    if (!s) { alert("That file doesn't look like a goals file or Goal Tracker backup."); return; }
+    const msg = state.goals.length
+      ? `Replace ALL your current data with this file?\n(${s.goals.length} goals, ${s.videos.length} videos)`
+      : `Import ${s.goals.length} goals and ${s.videos.length} videos?`;
+    if (!confirm(msg)) return;
+    state = s;
+    saveState(); renderAll();
+    alert("Imported ✅ It's saved to your account.");
   };
   reader.readAsText(file);
 });
@@ -615,5 +607,45 @@ setInterval(() => {
     renderAll();
   }
 }, 60000);
+
+/* ===========================================================
+   Start
+   =========================================================== */
+function boot() {
+  if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) {
+    authErr("Setup not finished: add your Supabase URL and key to config.js.");
+    document.querySelectorAll(".auth-form button").forEach(b => { b.disabled = true; });
+    return;
+  }
+  if (!window.supabase) {
+    authErr("Couldn't load the login library. Check your internet connection and reload.");
+    return;
+  }
+  sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+
+  sb.auth.onAuthStateChange((event, session) => {
+    // run outside the auth callback (supabase-js recommendation)
+    setTimeout(() => {
+      if (event === "PASSWORD_RECOVERY") {
+        inRecovery = true;
+        $("app").hidden = true;
+        $("authScreen").hidden = false;
+        showMode("newpass");
+        return;
+      }
+      if (event === "SIGNED_OUT" || !session) { showAuth(); showMode("signin"); return; }
+      if (session && session.user) enterApp(session.user);
+    }, 0);
+  });
+
+  // Errors coming back in an email link (e.g. expired reset link)
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get("error_description")) {
+    authErr(hash.get("error_description").replace(/\+/g, " ") + ". Please request a new link.");
+    history.replaceState(null, "", location.pathname);
+  }
+}
 
 boot();
