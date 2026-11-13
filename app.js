@@ -284,7 +284,63 @@ async function enterApp(u) {
   focusIndex = dayOfYear(new Date()) % focusList().length;
   quoteIndex = dayOfYear(new Date()) % quoteList().length;
   renderAll();
+  showPage(location.hash.slice(1));
 }
+
+/* ===========================================================
+   Hamburger menu + pages
+   =========================================================== */
+const PAGES = { today: "Today", calendar: "Calendar", goals: "My goals", motivation: "Motivation", videos: "Videos" };
+let currentPage = "today";
+
+function openMenu() {
+  $("drawer").classList.add("open");
+  $("drawer").setAttribute("aria-hidden", "false");
+  $("drawerBackdrop").hidden = false;
+  $("menuBtn").setAttribute("aria-expanded", "true");
+  const active = document.querySelector(".drawer-links a.active");
+  if (active) active.focus();
+}
+function closeMenu() {
+  $("drawer").classList.remove("open");
+  $("drawer").setAttribute("aria-hidden", "true");
+  $("drawerBackdrop").hidden = true;
+  $("menuBtn").setAttribute("aria-expanded", "false");
+}
+
+function showPage(p) {
+  if (!PAGES[p]) p = "today";
+  currentPage = p;
+  document.querySelectorAll(".page").forEach(el => { el.hidden = el.dataset.page !== p; });
+  document.querySelectorAll(".drawer-links a").forEach(a => a.classList.toggle("active", a.dataset.page === p));
+  $("pageTitle").textContent = PAGES[p];
+
+  // The daily check-in card is shared by the Today and Calendar pages
+  const card = $("checkinCard");
+  if (p === "today") {
+    $("slotToday").appendChild(card);
+    if (state && selectedKey !== todayKey()) {
+      selectedKey = todayKey();
+      viewYear = new Date().getFullYear(); viewMonth = new Date().getMonth();
+      renderDaily(); renderCalendar();
+    }
+  } else if (p === "calendar") {
+    $("slotCalendar").appendChild(card);
+  }
+  card.hidden = !(p === "today" || p === "calendar");
+  closeMenu();
+  window.scrollTo(0, 0);
+}
+
+$("menuBtn").onclick = () => ($("drawer").classList.contains("open") ? closeMenu() : openMenu());
+$("closeMenuBtn").onclick = closeMenu;
+$("drawerBackdrop").onclick = closeMenu;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+window.addEventListener("hashchange", () => { if (state) showPage(location.hash.slice(1)); });
+$("drawer").addEventListener("click", e => {
+  if (e.target.closest("#exportBtn, #signOutBtn")) closeMenu();
+});
+$("importInput").addEventListener("click", closeMenu);
 
 /* ===========================================================
    Date helpers

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Goal Tracker</title>
-  <link rel="stylesheet" href="style.css?v=3.3">
+  <link rel="stylesheet" href="style.css?v=3.4">
 </head>
 <body>
   <!-- ================= Login screen ================= -->
@@ -57,64 +57,94 @@
 
   <!-- ================= App ================= -->
   <div id="app" hidden>
-  <header class="top">
-    <div>
-      <h1>My Life Goals</h1>
-      <p class="sub" id="todayLabel"></p>
-      <p class="sub small-text"><span id="userEmail"></span> · <span id="syncStatus">Saved ✓</span></p>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-title">
+      <strong id="pageTitle">Today</strong>
+      <span class="sub small-text" id="todayLabel"></span>
     </div>
-    <div class="top-actions">
-      <button class="ghost" id="exportBtn" title="Download a backup of your data">Backup</button>
-      <label class="ghost file-btn" title="Import goals or restore a backup file">
-        Import<input type="file" id="importInput" accept="application/json,.json" hidden>
-      </label>
-      <button class="ghost" id="signOutBtn">Sign out</button>
-    </div>
+    <span class="sync-pill" id="syncStatus">Saved ✓</span>
   </header>
 
-  <section class="card welcome" id="welcomeBanner" hidden>
-    <strong>👋 Welcome!</strong> Your default goals couldn't be loaded yet. Make sure <code>private/seed.sql</code> was run in
-    Supabase, then reload this page. Or click <b>Import</b> (top right) and choose <code>goal-tracker\private\content.json</code>.
-  </section>
-
-  <!-- Focus reminder -->
-  <section class="focus-banner">
-    <div class="focus-icon">🎯</div>
-    <div>
-      <strong>Today's focus reminder</strong>
-      <p id="focusText"></p>
+  <!-- Slide-in menu -->
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <nav class="drawer" id="drawer" aria-label="Main menu" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <strong>🎯 My Life Goals</strong>
+        <div class="small-text sub" id="userEmail"></div>
+      </div>
+      <button class="ghost small" id="closeMenuBtn" aria-label="Close menu">✕</button>
     </div>
-    <button class="ghost small" id="newFocusBtn">Another</button>
-  </section>
+    <ul class="drawer-links">
+      <li><a href="#today"      data-page="today">🏠 <span>Today</span></a></li>
+      <li><a href="#calendar"   data-page="calendar">📅 <span>Calendar</span></a></li>
+      <li><a href="#goals"      data-page="goals">🎯 <span>My goals</span></a></li>
+      <li><a href="#motivation" data-page="motivation">💖 <span>Motivation</span></a></li>
+      <li><a href="#videos"     data-page="videos">🎬 <span>Videos</span></a></li>
+    </ul>
+    <div class="drawer-actions">
+      <button class="ghost" id="exportBtn" title="Download a backup of your data">💾 Backup</button>
+      <label class="ghost file-btn" title="Import goals or restore a backup file">
+        📂 Import<input type="file" id="importInput" accept="application/json,.json" hidden>
+      </label>
+      <button class="ghost" id="signOutBtn">🚪 Sign out</button>
+    </div>
+  </nav>
 
-  <!-- Stats -->
-  <section class="stats">
-    <div class="stat"><span class="num" id="statToday">0</span><span class="lbl">goals worked on today</span></div>
-    <div class="stat"><span class="num" id="statStreak">0</span><span class="lbl">day streak 🔥</span></div>
-    <div class="stat"><span class="num" id="statDays">0</span><span class="lbl">active days total</span></div>
-    <div class="stat"><span class="num" id="statAchieved">0</span><span class="lbl">goals achieved ✅</span></div>
-  </section>
-
-  <main class="grid">
-    <!-- Calendar -->
-    <section class="card">
-      <div class="cal-head">
-        <button class="ghost small" id="prevMonth" aria-label="Previous month">‹</button>
-        <h2 id="monthLabel"></h2>
-        <button class="ghost small" id="nextMonth" aria-label="Next month">›</button>
-      </div>
-      <div class="cal-week">
-        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="legend">
-        <span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span>
-        <button class="ghost small" id="todayBtn">Go to today</button>
-      </div>
+  <main class="pages">
+    <section class="card welcome" id="welcomeBanner" hidden>
+      <strong>👋 Welcome!</strong> Your default goals couldn't be loaded yet. Make sure <code>private/seed.sql</code> was run in
+      Supabase, then reload this page. Or open the ☰ menu → <b>Import</b> and choose <code>goal-tracker\private\content.json</code>.
     </section>
 
-    <!-- Daily checklist -->
-    <section class="card">
+    <!-- ===== Page: Today ===== -->
+    <div class="page" data-page="today">
+      <section class="focus-banner">
+        <div class="focus-icon">🎯</div>
+        <div>
+          <strong>Today's focus reminder</strong>
+          <p id="focusText"></p>
+        </div>
+        <button class="ghost small" id="newFocusBtn">Another</button>
+      </section>
+
+      <section class="stats">
+        <div class="stat"><span class="num" id="statToday">0</span><span class="lbl">goals worked on today</span></div>
+        <div class="stat"><span class="num" id="statStreak">0</span><span class="lbl">day streak 🔥</span></div>
+        <div class="stat"><span class="num" id="statDays">0</span><span class="lbl">active days total</span></div>
+        <div class="stat"><span class="num" id="statAchieved">0</span><span class="lbl">goals achieved ✅</span></div>
+      </section>
+
+      <div id="slotToday"></div>
+    </div>
+
+    <!-- ===== Page: Calendar ===== -->
+    <div class="page grid" data-page="calendar" hidden>
+      <section class="card">
+        <div class="cal-head">
+          <button class="ghost small" id="prevMonth" aria-label="Previous month">‹</button>
+          <h2 id="monthLabel"></h2>
+          <button class="ghost small" id="nextMonth" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-week">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="legend">
+          <span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span>
+          <button class="ghost small" id="todayBtn">Go to today</button>
+        </div>
+      </section>
+      <div id="slotCalendar"></div>
+    </div>
+
+    <!-- Daily check-in card (moves between the Today and Calendar pages) -->
+    <section class="card" id="checkinCard">
       <h2 id="dayLabel">Today</h2>
       <p class="hint" id="dayHint">Tick every goal you worked on today, even a small step counts.</p>
       <ul class="checklist" id="dailyList"></ul>
@@ -122,54 +152,60 @@
       <label class="note-label" for="dayNote">My note for this day</label>
       <textarea id="dayNote" rows="3" placeholder="What did I do today for my future self?"></textarea>
     </section>
+
+    <!-- ===== Page: Goals ===== -->
+    <div class="page" data-page="goals" hidden>
+      <section class="card">
+        <div class="goals-head">
+          <h2>My goal list</h2>
+          <span class="hint">Tick the big box when a goal is fully achieved.</span>
+        </div>
+        <form id="addForm" class="add-form">
+          <input id="newGoal" type="text" placeholder="Add a new goal…" required maxlength="200">
+          <select id="newCategory">
+            <option>Self</option><option>Love</option><option>Family</option><option>Travel</option>
+            <option>Beauty</option><option>Wealth</option><option>Career</option><option>Strength</option>
+          </select>
+          <button type="submit">Add goal</button>
+        </form>
+        <ol class="goal-list" id="goalList"></ol>
+      </section>
+    </div>
+
+    <!-- ===== Page: Motivation ===== -->
+    <div class="page" data-page="motivation" hidden>
+      <section class="card motivation">
+        <h2>Motivation for today</h2>
+        <blockquote id="quoteText"></blockquote>
+        <h3>Today's advice</h3>
+        <p id="adviceText"></p>
+        <button class="ghost small" id="newQuoteBtn">Give me another boost</button>
+      </section>
+    </div>
+
+    <!-- ===== Page: Videos ===== -->
+    <div class="page" data-page="videos" hidden>
+      <section class="card">
+        <div class="goals-head">
+          <h2>🎬 My motivation videos</h2>
+          <span class="hint">Paste any YouTube link to add it here.</span>
+        </div>
+        <form id="videoForm" class="add-form">
+          <input id="videoUrl" type="text" placeholder="Paste a YouTube link, e.g. https://youtu.be/…" required>
+          <input id="videoTitle" type="text" placeholder="Name (optional)" maxlength="100" class="short">
+          <button type="submit">Add video</button>
+        </form>
+        <p class="lock-error" id="videoError" role="alert"></p>
+        <div class="video-grid" id="videoGrid"></div>
+      </section>
+    </div>
   </main>
-
-  <!-- Motivation -->
-  <section class="card motivation">
-    <h2>Motivation for today</h2>
-    <blockquote id="quoteText"></blockquote>
-    <h3>Today's advice</h3>
-    <p id="adviceText"></p>
-    <button class="ghost small" id="newQuoteBtn">Give me another boost</button>
-  </section>
-
-  <!-- Videos -->
-  <section class="card">
-    <div class="goals-head">
-      <h2>🎬 My motivation videos</h2>
-      <span class="hint">Paste any YouTube link to add it here.</span>
-    </div>
-    <form id="videoForm" class="add-form">
-      <input id="videoUrl" type="text" placeholder="Paste a YouTube link, e.g. https://youtu.be/…" required>
-      <input id="videoTitle" type="text" placeholder="Name (optional)" maxlength="100" class="short">
-      <button type="submit">Add video</button>
-    </form>
-    <p class="lock-error" id="videoError" role="alert"></p>
-    <div class="video-grid" id="videoGrid"></div>
-  </section>
-
-  <!-- Goal list -->
-  <section class="card">
-    <div class="goals-head">
-      <h2>My goal list</h2>
-      <span class="hint">Tick the big box when a goal is fully achieved.</span>
-    </div>
-    <form id="addForm" class="add-form">
-      <input id="newGoal" type="text" placeholder="Add a new goal…" required maxlength="200">
-      <select id="newCategory">
-        <option>Self</option><option>Love</option><option>Family</option><option>Travel</option>
-        <option>Beauty</option><option>Wealth</option><option>Career</option><option>Strength</option>
-      </select>
-      <button type="submit">Add goal</button>
-    </form>
-    <ol class="goal-list" id="goalList"></ol>
-  </section>
 
   <footer>Your progress is saved to your account, so sign in on any device to see it.</footer>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-  <script src="config.js?v=3.3"></script>
-  <script src="app.js?v=3.3"></script>
+  <script src="config.js?v=3.4"></script>
+  <script src="app.js?v=3.4"></script>
 </body>
 </html>

@@ -175,6 +175,54 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
 
 [hidden] { display: none !important; }
 
+/* ---------- Top bar + hamburger menu ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  margin: -16px -16px 16px; padding: 10px 16px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.topbar-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.topbar-title strong { font-size: 1.15rem; }
+.topbar-title .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-btn {
+  width: 44px; height: 44px; padding: 10px; border-radius: 12px;
+  background: var(--accent-soft); display: flex; flex-direction: column; justify-content: space-between;
+}
+.menu-btn span { display: block; height: 3px; border-radius: 3px; background: var(--accent); }
+.sync-pill {
+  font-size: .75rem; color: var(--muted); background: var(--card);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 30; }
+.drawer {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 40;
+  width: min(290px, 85vw); padding: 16px;
+  background: var(--card); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 16px;
+  transform: translateX(-105%); transition: transform .25s ease;
+  overflow-y: auto; visibility: hidden;
+}
+.drawer.open { transform: translateX(0); visibility: visible; box-shadow: 4px 0 24px rgba(0, 0, 0, .2); }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.drawer-head .sub { overflow-wrap: anywhere; }
+.drawer-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.drawer-links a {
+  display: flex; gap: 12px; align-items: center;
+  padding: 12px 14px; border-radius: 12px;
+  color: var(--text); text-decoration: none; font-weight: 600;
+}
+.drawer-links a:hover { background: var(--accent-soft); }
+.drawer-links a.active { background: var(--accent); color: #fff; }
+.drawer-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.drawer-actions > * { width: 100%; text-align: left; }
+@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
+
+.page > .card:last-child, .page > div > .card { margin-bottom: 16px; }
+.page.grid { margin-bottom: 16px; }
+.page.grid > div > .card { margin-bottom: 0; height: 100%; }
+
 .auth-form { display: flex; flex-direction: column; align-items: stretch; gap: 10px; text-align: left; }
 .auth-form .hint { text-align: center; }
 .auth-form input { padding: 10px 12px; height: 44px; }
