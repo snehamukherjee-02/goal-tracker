@@ -85,7 +85,8 @@ function normalize(s) {
       tip: g.tip || "",
       achieved: !!g.achieved,
       achievedDate: g.achievedDate || null,
-      createdAt: g.createdAt || today
+      createdAt: g.createdAt || today,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(g.date || "") ? g.date : null   // set → goal only for that one day
     })),
     log: s.log && typeof s.log === "object" ? s.log : {},
     notes: s.notes && typeof s.notes === "object" ? s.notes : {},
@@ -376,8 +377,25 @@ let quoteIndex = 0;
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+/* Life goals (no date) show on EVERY calendar day.
+   A goal with a date shows only on that one day. */
 function goalsAvailableOn(k) {
-  return state.goals.filter(g => !g.createdAt || g.createdAt <= k);
+  return state.goals.filter(g => !g.date || g.date === k);
+}
+function shortDate(k) {
+  return parseKey(k).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+/* A dated goal is "achieved" exactly when it's ticked on its day */
+function syncDatedGoal(g) {
+  if (!g.date) return;
+  const done = (state.log[g.date] || []).includes(g.id);
+  g.achieved = done;
+  g.achievedDate = done ? g.date : null;
+}
+function setLogged(k, id, on) {
+  const list = new Set(state.log[k] || []);
+  on ? list.add(id) : list.delete(id);
+  if (list.size) state.log[k] = [...list]; else delete state.log[k];
 }
 function workedOn(k) {
   const ids = new Set(state.goals.map(g => g.id));
@@ -428,28 +446,34 @@ function renderCalendar() {
     if (k === selectedKey) cls.push("selected");
     const future = k > t;
     if (future) cls.push("future");
-    html += `<button class="${cls.join(" ")}" data-key="${k}" ${future ? "disabled" : ""}
-              title="${count} goal${count === 1 ? "" : "s"} worked on">
-              ${day}${count ? `<small>${count}✓</small>` : ""}</button>`;
+    const planned = state.goals.some(g => g.date === k);
+    const mark = count ? `<small>${count}✓</small>` : planned ? `<small>📌</small>` : "";
+    html += `<button class="${cls.join(" ")}" data-key="${k}"
+              title="${count} goal${count === 1 ? "" : "s"} worked on${planned ? " · has a goal for this day" : ""}">
+              ${day}${mark}</button>`;
   }
   $("calGrid").innerHTML = html;
 }
 
 function renderDaily() {
   const isToday = selectedKey === todayKey();
+  const isFuture = selectedKey > todayKey();
   $("dayLabel").textContent = isToday ? "Today's goal check-in" : prettyDate(selectedKey);
   $("dayHint").textContent = isToday
     ? "Tick every goal you worked on today, even a small step counts."
-    : "Editing a past day. Tick what you worked on that day.";
+    : isFuture
+      ? "A future day. Goals marked 📌 are planned just for this day."
+      : "Editing a past day. Tick what you worked on that day.";
 
   const done = new Set(workedOn(selectedKey));
-  const goals = goalsAvailableOn(selectedKey);
+  // goals set for this specific day first, then life goals
+  const goals = goalsAvailableOn(selectedKey).sort((a, b) => (b.date ? 1 : 0) - (a.date ? 1 : 0));
   $("dailyList").innerHTML = goals.length === 0
-    ? `<li class="hint">No goals yet on this date.</li>`
+    ? `<li class="hint">No goals yet. Add some on the "My goals" page.</li>`
     : goals.map(g => `
       <li><label>
         <input type="checkbox" data-goal="${g.id}" ${done.has(g.id) ? "checked" : ""}>
-        <span>${esc(g.title)}${g.achieved ? `<span class="done-tag">✅ achieved</span>` : ""}</span>
+        <span>${g.date ? "📌 " : ""}${esc(g.title)}${g.date ? `<span class="tag day-tag">only this day</span>` : ""}${!g.date && g.achieved ? `<span class="done-tag">✅ achieved</span>` : ""}</span>
       </label></li>`).join("");
   $("cheerText").textContent = cheerFor(done.size, goals.length);
   $("dayNote").value = state.notes[selectedKey] || "";
@@ -464,7 +488,10 @@ function renderGoals() {
         <div class="goal-title">${esc(g.title)}</div>
         <div class="goal-meta">
           <span class="tag">${esc(g.category || "Self")}</span>
-          ${g.achieved && g.achievedDate ? `Achieved on ${esc(g.achievedDate)} 🎉` : `Worked on ${countDaysForGoal(g.id)} day(s)`}
+          ${g.date ? `<span class="tag day-tag">📌 ${esc(shortDate(g.date))}</span>` : ""}
+          ${g.achieved && g.achievedDate ? `Achieved on ${esc(g.achievedDate)} 🎉`
+            : g.date ? "Not done yet"
+            : `Worked on ${countDaysForGoal(g.id)} day(s)`}
         </div>
         ${g.tip ? `<div class="goal-tip">💡 ${esc(g.tip)}</div>` : ""}
       </div>
@@ -481,7 +508,7 @@ function renderMotivation() {
   $("quoteText").textContent = Q[quoteIndex % Q.length];
 
   const general = A[dayOfYear(new Date()) % A.length];
-  const open = state.goals.filter(g => !g.achieved);
+  const open = state.goals.filter(g => !g.achieved && !g.date);
   let personal = "";
   if (open.length) {
     const neglected = open
@@ -549,12 +576,12 @@ $("todayBtn").onclick = () => {
 $("dailyList").addEventListener("change", e => {
   const id = e.target.dataset.goal;
   if (!id) return;
-  const list = new Set(state.log[selectedKey] || []);
-  e.target.checked ? list.add(id) : list.delete(id);
-  if (list.size) state.log[selectedKey] = [...list]; else delete state.log[selectedKey];
+  setLogged(selectedKey, id, e.target.checked);
+  const g = state.goals.find(x => x.id === id);
+  if (g) syncDatedGoal(g);
   saveState();
   renderStats(); renderCalendar(); renderGoals(); renderMotivation();
-  $("cheerText").textContent = cheerFor(list.size, goalsAvailableOn(selectedKey).length);
+  $("cheerText").textContent = cheerFor(workedOn(selectedKey).length, goalsAvailableOn(selectedKey).length);
 });
 
 $("dayNote").addEventListener("input", e => {
@@ -567,13 +594,16 @@ $("addForm").addEventListener("submit", e => {
   e.preventDefault();
   const title = $("newGoal").value.trim();
   if (!title) return;
+  const date = $("newDate").value || null;
   state.goals.push({
     id: uid(), title, category: $("newCategory").value, tip: "",
-    achieved: false, achievedDate: null, createdAt: todayKey()
+    achieved: false, achievedDate: null, createdAt: todayKey(), date
   });
   $("newGoal").value = "";
+  $("newDate").value = "";
   saveState();
   renderAll();
+  if (date) setSync(`📌 Added for ${shortDate(date)}`);
 });
 
 $("goalList").addEventListener("click", e => {
@@ -586,6 +616,16 @@ $("goalList").addEventListener("click", e => {
     if (title.trim()) g.title = title.trim();
     const tip = prompt("Your personal tip / plan for this goal (optional):", g.tip || "");
     if (tip !== null) g.tip = tip.trim();
+    const d = prompt("Only for one day? Enter a date as YYYY-MM-DD.\nLeave empty to show it on every day.", g.date || "");
+    if (d !== null) {
+      const nd = d.trim();
+      if (nd && !/^\d{4}-\d{2}-\d{2}$/.test(nd)) alert("Date not changed. Please use the format YYYY-MM-DD, e.g. 2026-11-20.");
+      else if ((nd || null) !== g.date) {
+        if (g.date) setLogged(g.date, g.id, false);   // old day's tick no longer applies
+        g.date = nd || null;
+        if (g.date) syncDatedGoal(g); else { g.achieved = false; g.achievedDate = null; }
+      }
+    }
     saveState(); renderAll();
   }
   if (delId) {
@@ -600,8 +640,14 @@ $("goalList").addEventListener("change", e => {
   const id = e.target.dataset.achieve;
   if (!id) return;
   const g = state.goals.find(x => x.id === id);
-  g.achieved = e.target.checked;
-  g.achievedDate = g.achieved ? todayKey() : null;
+  if (g.date) {
+    // day goal: the big box and the calendar tick are the same thing
+    setLogged(g.date, g.id, e.target.checked);
+    syncDatedGoal(g);
+  } else {
+    g.achieved = e.target.checked;
+    g.achievedDate = g.achieved ? todayKey() : null;
+  }
   saveState(); renderAll();
   if (g.achieved) alert(`🎉 CONGRATULATIONS! 🎉\n\nYou achieved:\n"${g.title}"\n\nYou kept your promise to yourself. Be proud!`);
 });

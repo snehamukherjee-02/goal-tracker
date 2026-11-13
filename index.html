@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Goal Tracker</title>
-  <link rel="stylesheet" href="style.css?v=3.6">
+  <link rel="stylesheet" href="style.css?v=3.7">
 </head>
 <body>
   <!-- ================= Login screen ================= -->
@@ -166,6 +166,8 @@
             <option>Self</option><option>Love</option><option>Family</option><option>Travel</option>
             <option>Beauty</option><option>Wealth</option><option>Career</option><option>Strength</option>
           </select>
+          <input id="newDate" type="date" class="date-input" title="Optional: pick a date to make this a goal for that day only" aria-label="Only for this date (optional)">
+          <span class="hint date-hint">📅 Optional: pick a date to set the goal for just that day. Leave it empty for a life goal shown every day.</span>
           <button type="submit">Add goal</button>
         </form>
         <ol class="goal-list" id="goalList"></ol>
@@ -205,7 +207,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-  <script src="config.js?v=3.6"></script>
-  <script src="app.js?v=3.6"></script>
+  <script src="config.js?v=3.7"></script>
+  <script src="app.js?v=3.7"></script>
 </body>
 </html>

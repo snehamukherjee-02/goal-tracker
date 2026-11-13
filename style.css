@@ -136,7 +136,7 @@ button:hover, .file-btn:hover { filter: brightness(1.08); }
 .cheer { font-weight: 600; color: var(--accent); min-height: 1.5em; }
 .note-label { display: block; font-size: .9rem; color: var(--muted); margin-top: 8px; }
 textarea, select,
-input[type=text], input[type=email], input[type=password] {
+input[type=text], input[type=email], input[type=password], input[type=date] {
   display: block;
   width: 100%; margin: 0; font: inherit; color: var(--text); background: var(--bg);
   border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
@@ -265,3 +265,9 @@ footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 10
   .goal-list li { flex-wrap: wrap; }
   .goal-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* v3.7: goals for one specific day */
+.add-form input.date-input { flex: 0 1 170px; }
+.add-form .date-hint { flex: 1 1 100%; font-size: .8rem; margin: -2px 0 0; }
+.day-tag { margin-left: 6px; margin-right: 0; }
+.cal-day.future { opacity: .55; cursor: pointer; }
