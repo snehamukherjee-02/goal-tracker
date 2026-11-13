@@ -59,10 +59,14 @@ With **Gmail**:
 
 Other free SMTP options: **Brevo** (300 emails a day), **Resend** or **Zoho Mail**. Use their SMTP host, port, username and password.
 
-### 6. Create your account and lock sign-ups
-1. Open the website, click **Create account**, confirm the email, and sign in.
-2. Click **Import** and choose `private/content.json` from this folder. Your goals, messages and videos load into your account.
-3. In Supabase, go to **Authentication → Sign In / Providers** and turn **off** *Allow new users to sign up*.
+### 6. Load your default goals, videos and messages (automatic)
+In Supabase's **SQL Editor**, run everything from `private/seed.sql`. This file is private and never uploaded.
+It stores your default goals, videos, reminders, quotes and advice in a table that **only logged-in users** can read.
+The first time you sign in, an empty account fills itself with them automatically.
+
+### 7. Create your account and lock sign-ups
+1. Open the website, click **Create account**, confirm the email, and sign in. Your goals appear automatically.
+2. In Supabase, go to **Authentication → Sign In / Providers** and turn **off** *Allow new users to sign up*.
    Now nobody else can create an account.
 
 ---
@@ -114,6 +118,11 @@ Other free SMTP options: **Brevo** (300 emails a day), **Resend** or **Zoho Mail
 ---
 
 ## 📝 Updates (changelog)
+
+### v3.1 — 13 November 2026
+- ✨ Default goals, videos, focus reminders, quotes and advice now **load automatically** on first sign-in
+  from a private `starter_content` table (readable only when logged in). No manual Import needed.
+- Fixed the login form alignment.
 
 ### v3.0 — 13 November 2026
 - 👤 **Email and password accounts** (Supabase Auth). Sign in from any device.

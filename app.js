@@ -94,8 +94,21 @@ function normalize(s) {
     })).filter(v => v.yt),
     focus: strArr(s.focus),
     quotes: strArr(s.quotes),
-    advice: strArr(s.advice)
+    advice: strArr(s.advice),
+    seeded: !!s.seeded
   };
+}
+
+/* First time (empty account): load your default goals, videos, reminders, quotes
+   and advice from the private `starter_content` table (only readable when logged in). */
+async function maybeSeed() {
+  if (state.seeded || state.goals.length > 0) return;
+  const { data, error } = await sb.from("starter_content").select("data").eq("id", 1).maybeSingle();
+  if (error || !data) return;              // table not set up yet → stay empty
+  const starter = normalize(data.data);
+  if (!starter) return;
+  state = { ...starter, log: state.log, notes: state.notes, seeded: true };
+  saveState();
 }
 
 const focusList = () => state.focus.length ? state.focus : GENERIC_FOCUS;
@@ -256,6 +269,7 @@ async function enterApp(u) {
   user = u;
   try {
     await loadRemote();
+    await maybeSeed();
   } catch (err) {
     entering = false;
     user = null;
@@ -590,7 +604,7 @@ $("importInput").addEventListener("change", e => {
       ? `Replace ALL your current data with this file?\n(${s.goals.length} goals, ${s.videos.length} videos)`
       : `Import ${s.goals.length} goals and ${s.videos.length} videos?`;
     if (!confirm(msg)) return;
-    state = s;
+    state = { ...s, seeded: true };
     saveState(); renderAll();
     alert("Imported ✅ It's saved to your account.");
   };

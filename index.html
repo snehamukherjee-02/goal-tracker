@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Goal Tracker</title>
-  <link rel="stylesheet" href="style.css?v=3.2">
+  <link rel="stylesheet" href="style.css?v=3.3">
 </head>
 <body>
   <!-- ================= Login screen ================= -->
@@ -73,8 +73,8 @@
   </header>
 
   <section class="card welcome" id="welcomeBanner" hidden>
-    <strong>👋 Welcome!</strong> Your account is empty. Click <b>Import</b> (top right) and choose your goals file
-    (<code>goal-tracker\private\content.json</code>) to load your goals, messages and videos, or add goals yourself below.
+    <strong>👋 Welcome!</strong> Your default goals couldn't be loaded yet. Make sure <code>private/seed.sql</code> was run in
+    Supabase, then reload this page. Or click <b>Import</b> (top right) and choose <code>goal-tracker\private\content.json</code>.
   </section>
 
   <!-- Focus reminder -->
@@ -169,7 +169,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-  <script src="config.js?v=3.2"></script>
-  <script src="app.js?v=3.2"></script>
+  <script src="config.js?v=3.3"></script>
+  <script src="app.js?v=3.3"></script>
 </body>
 </html>
