@@ -135,10 +135,15 @@ button:hover, .file-btn:hover { filter: brightness(1.08); }
 .checklist .done-tag { font-size: .75rem; color: var(--done); margin-left: 4px; }
 .cheer { font-weight: 600; color: var(--accent); min-height: 1.5em; }
 .note-label { display: block; font-size: .9rem; color: var(--muted); margin-top: 8px; }
-textarea, input[type=text], select {
-  width: 100%; font: inherit; color: var(--text); background: var(--bg);
+textarea, select,
+input[type=text], input[type=email], input[type=password] {
+  display: block;
+  width: 100%; margin: 0; font: inherit; color: var(--text); background: var(--bg);
   border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+  -webkit-appearance: none; appearance: none;
 }
+select { -webkit-appearance: auto; appearance: auto; }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 
 .motivation blockquote {
   margin: 8px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
@@ -170,11 +175,10 @@ textarea, input[type=text], select {
 
 [hidden] { display: none !important; }
 
-.auth-form { display: flex; flex-direction: column; gap: 10px; }
-.auth-form input {
-  width: 100%; font: inherit; color: var(--text); background: var(--bg);
-  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
-}
+.auth-form { display: flex; flex-direction: column; align-items: stretch; gap: 10px; text-align: left; }
+.auth-form .hint { text-align: center; }
+.auth-form input { padding: 10px 12px; height: 44px; }
+.auth-form button { width: 100%; height: 44px; }
 .auth-links { display: flex; justify-content: space-between; font-size: .9rem; }
 .auth-links a { color: var(--accent); text-decoration: none; }
 .auth-links a:hover { text-decoration: underline; }
@@ -196,10 +200,6 @@ textarea, input[type=text], select {
 .lock { min-height: 80vh; display: flex; align-items: center; justify-content: center; }
 .lock-card { width: 100%; max-width: 380px; text-align: center; display: flex; flex-direction: column; gap: 12px; }
 .lock-icon { font-size: 2.6rem; }
-.lock-card input[type=password] {
-  width: 100%; font: inherit; color: var(--text); background: var(--bg);
-  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
-}
 .remember { font-size: .85rem; color: var(--muted); display: flex; gap: 6px; align-items: center; justify-content: center; }
 .lock-error { color: #d33; min-height: 1.2em; margin: 0; font-size: .9rem; }
 
