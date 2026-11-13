@@ -1,0 +1,60 @@
+# Builds the site: encrypts your private content with your password
+# (both stored as GitHub repository secrets) and publishes it to GitHub Pages.
+#
+# 🔑 RESET / CHANGE PASSWORD:
+#   Settings → Secrets and variables → Actions → GOAL_PASSWORD → Update
+#   then Actions → "Deploy encrypted site" → Run workflow.
+
+name: Deploy encrypted site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Encrypt private content
+        env:
+          GOAL_PASSWORD: ${{ secrets.GOAL_PASSWORD }}
+          CONTENT_JSON: ${{ secrets.CONTENT_JSON }}
+        run: |
+          if [ -z "$GOAL_PASSWORD" ] || [ -z "$CONTENT_JSON" ]; then
+            echo "::error::Missing GOAL_PASSWORD or CONTENT_JSON repository secret."
+            exit 1
+          fi
+          mkdir -p private
+          printf '%s' "$CONTENT_JSON" > private/content.json
+          node tools/encrypt.mjs
+          rm -f private/content.json
+          mkdir _site
+          cp index.html style.css app.js content.enc.js _site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

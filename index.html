@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Goal Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Lock screen -->
+  <section id="lockScreen" class="lock">
+    <form id="lockForm" class="card lock-card">
+      <div class="lock-icon">🔒</div>
+      <h1>My Goal Tracker</h1>
+      <p class="hint">This page is private. Enter your password to unlock.</p>
+      <input type="password" id="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+      <label class="remember"><input type="checkbox" id="remember"> Remember on this device (not on shared computers)</label>
+      <button type="submit" id="unlockBtn">Unlock</button>
+      <p class="lock-error" id="lockError" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>My Life Goals</h1>
+      <p class="sub" id="todayLabel"></p>
+    </div>
+    <div class="top-actions">
+      <button class="ghost" id="lockBtn" title="Lock the tracker and forget this device">🔒 Lock</button>
+      <button class="ghost" id="exportBtn" title="Download a backup of your data">Backup</button>
+      <label class="ghost file-btn" title="Restore from a backup file">
+        Restore<input type="file" id="importInput" accept="application/json" hidden>
+      </label>
+    </div>
+  </header>
+
+  <!-- Focus reminder -->
+  <section class="focus-banner" id="focusBanner">
+    <div class="focus-icon">🎯</div>
+    <div>
+      <strong>Today's focus reminder</strong>
+      <p id="focusText"></p>
+    </div>
+    <button class="ghost small" id="newFocusBtn">Another</button>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="stat"><span class="num" id="statToday">0</span><span class="lbl">goals worked on today</span></div>
+    <div class="stat"><span class="num" id="statStreak">0</span><span class="lbl">day streak 🔥</span></div>
+    <div class="stat"><span class="num" id="statDays">0</span><span class="lbl">active days total</span></div>
+    <div class="stat"><span class="num" id="statAchieved">0</span><span class="lbl">goals achieved ✅</span></div>
+  </section>
+
+  <main class="grid">
+    <!-- Calendar -->
+    <section class="card">
+      <div class="cal-head">
+        <button class="ghost small" id="prevMonth" aria-label="Previous month">‹</button>
+        <h2 id="monthLabel"></h2>
+        <button class="ghost small" id="nextMonth" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-week">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="legend">
+        <span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span>
+        <button class="ghost small" id="todayBtn">Go to today</button>
+      </div>
+    </section>
+
+    <!-- Daily checklist -->
+    <section class="card">
+      <h2 id="dayLabel">Today</h2>
+      <p class="hint" id="dayHint">Tick every goal you worked on today, even a small step counts.</p>
+      <ul class="checklist" id="dailyList"></ul>
+      <p class="cheer" id="cheerText"></p>
+      <label class="note-label" for="dayNote">My note for this day</label>
+      <textarea id="dayNote" rows="3" placeholder="What did I do today for my future self?"></textarea>
+    </section>
+  </main>
+
+  <!-- Motivation -->
+  <section class="card motivation">
+    <h2>Motivation for today</h2>
+    <blockquote id="quoteText"></blockquote>
+    <h3>Today's advice</h3>
+    <p id="adviceText"></p>
+    <button class="ghost small" id="newQuoteBtn">Give me another boost</button>
+  </section>
+
+  <!-- Videos -->
+  <section class="card">
+    <div class="goals-head">
+      <h2>🎬 My motivation videos</h2>
+      <span class="hint">Paste any YouTube link to add it here.</span>
+    </div>
+    <form id="videoForm" class="add-form">
+      <input id="videoUrl" type="text" placeholder="Paste a YouTube link, e.g. https://youtu.be/…" required>
+      <input id="videoTitle" type="text" placeholder="Name (optional)" maxlength="100" class="short">
+      <button type="submit">Add video</button>
+    </form>
+    <p class="lock-error" id="videoError" role="alert"></p>
+    <div class="video-grid" id="videoGrid"></div>
+  </section>
+
+  <!-- Goal list -->
+  <section class="card">
+    <div class="goals-head">
+      <h2>My goal list</h2>
+      <span class="hint">Tick the big box when a goal is fully achieved.</span>
+    </div>
+    <form id="addForm" class="add-form">
+      <input id="newGoal" type="text" placeholder="Add a new goal…" required maxlength="200">
+      <select id="newCategory">
+        <option>Self</option><option>Love</option><option>Family</option><option>Travel</option>
+        <option>Beauty</option><option>Wealth</option><option>Career</option><option>Strength</option>
+      </select>
+      <button type="submit">Add goal</button>
+    </form>
+    <ol class="goal-list" id="goalList"></ol>
+  </section>
+
+  <footer>Your progress is saved encrypted in this browser on this device. Use <b>Backup</b> / <b>Restore</b> to move it between devices.</footer>
+  </div>
+
+  <script src="content.enc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
