@@ -96,6 +96,7 @@ function normalize(s) {
     focus: strArr(s.focus),
     quotes: strArr(s.quotes),
     advice: strArr(s.advice),
+    theme: typeof s.theme === "string" ? s.theme : "",
     seeded: !!s.seeded
   };
 }
@@ -171,6 +172,7 @@ document.addEventListener("visibilitychange", async () => {
   if (error || !data || data.updated_at === lastUpdated || dirty || saving) return;
   state = normalize(data.data) || state;
   lastUpdated = data.updated_at;
+  if (state.theme) applyTheme(state.theme);
   renderAll();
   setSync("Updated from another device ✓");
 });
@@ -281,6 +283,7 @@ async function enterApp(u) {
   $("authScreen").hidden = true;
   $("app").hidden = false;
   $("userEmail").textContent = u.email;
+  if (state.theme) applyTheme(state.theme);   // your theme follows you to every device
   setSync("Saved ✓");
   focusIndex = dayOfYear(new Date()) % focusList().length;
   quoteIndex = dayOfYear(new Date()) % quoteList().length;
@@ -479,28 +482,94 @@ function renderDaily() {
   $("dayNote").value = state.notes[selectedKey] || "";
 }
 
+/* ---------- Goal data table: search, filters, sortable columns ---------- */
+const dt = { sort: "order", dir: 1 };
+
 function renderGoals() {
-  $("goalList").innerHTML = state.goals.map(g => `
-    <li class="${g.achieved ? "achieved" : ""}" data-id="${g.id}">
-      <input type="checkbox" class="big-check" data-achieve="${g.id}" ${g.achieved ? "checked" : ""}
-             title="Mark as fully achieved">
-      <div class="goal-body">
-        <div class="goal-title">${esc(g.title)}</div>
-        <div class="goal-meta">
-          <span class="tag">${esc(g.category || "Self")}</span>
-          ${g.date ? `<span class="tag day-tag">📌 ${esc(shortDate(g.date))}</span>` : ""}
-          ${g.achieved && g.achievedDate ? `Achieved on ${esc(g.achievedDate)} 🎉`
-            : g.date ? "Not done yet"
-            : `Worked on ${countDaysForGoal(g.id)} day(s)`}
-        </div>
+  // category filter options follow the categories you actually use
+  const cats = [...new Set(state.goals.map(g => g.category || "Self"))].sort();
+  const catSel = $("dtCategory"), keep = catSel.value;
+  catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option>${esc(c)}</option>`).join("");
+  catSel.value = cats.includes(keep) ? keep : "";
+
+  const q = $("dtSearch").value.trim().toLowerCase();
+  const cat = catSel.value, type = $("dtType").value, status = $("dtStatus").value;
+
+  let rows = state.goals.map((g, i) => ({ g, order: i + 1, days: countDaysForGoal(g.id) }))
+    .filter(({ g }) =>
+      (!q || g.title.toLowerCase().includes(q) || (g.tip || "").toLowerCase().includes(q)) &&
+      (!cat || (g.category || "Self") === cat) &&
+      (!type || (type === "day" ? !!g.date : !g.date)) &&
+      (!status || (status === "done" ? g.achieved : !g.achieved)));
+
+  const val = {
+    order: r => r.order,
+    title: r => r.g.title.toLowerCase(),
+    category: r => (r.g.category || "Self").toLowerCase(),
+    date: r => r.g.date || "",                       // "every day" goals first
+    progress: r => (r.g.achieved ? 100000 : 0) + r.days
+  }[dt.sort];
+  rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : a.order - b.order) * dt.dir);
+
+  document.querySelectorAll(".datatable th[data-sort]").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.sort === dt.sort);
+    th.dataset.dir = th.dataset.sort === dt.sort ? (dt.dir > 0 ? "▲" : "▼") : "";
+  });
+
+  $("goalList").innerHTML = rows.length === 0
+    ? `<tr><td colspan="7" class="dt-empty">${state.goals.length ? "No goals match your search." : "No goals yet. Add your first one above ✨"}</td></tr>`
+    : rows.map(({ g, order, days }) => `
+    <tr class="${g.achieved ? "achieved" : ""}" data-id="${g.id}">
+      <td class="col-num" data-label="#">${order}</td>
+      <td class="col-check" data-label="Done">
+        <input type="checkbox" class="big-check" data-achieve="${g.id}" ${g.achieved ? "checked" : ""} title="Mark as achieved">
+      </td>
+      <td class="col-goal" data-label="Goal">
+        <div class="goal-title">${g.date ? "📌 " : ""}${esc(g.title)}</div>
         ${g.tip ? `<div class="goal-tip">💡 ${esc(g.tip)}</div>` : ""}
-      </div>
-      <div class="goal-actions">
+      </td>
+      <td data-label="Category"><span class="tag">${esc(g.category || "Self")}</span></td>
+      <td data-label="When">${g.date ? `<span class="tag day-tag">📅 ${esc(shortDate(g.date))}</span>` : `<span class="muted">Every day</span>`}</td>
+      <td data-label="Progress">${g.achieved && g.achievedDate ? `<span class="ok">✅ ${esc(shortDate(g.achievedDate))}</span>`
+          : g.date ? `<span class="muted">Not done yet</span>`
+          : `${days} day${days === 1 ? "" : "s"}`}</td>
+      <td class="col-actions" data-label="">
         <button class="ghost" data-edit="${g.id}">Edit</button>
         <button class="ghost" data-del="${g.id}">Delete</button>
-      </div>
-    </li>`).join("");
+      </td>
+    </tr>`).join("");
+
+  const achieved = state.goals.filter(g => g.achieved).length;
+  $("dtCount").textContent = state.goals.length
+    ? `Showing ${rows.length} of ${state.goals.length} goals · ${achieved} achieved`
+    : "";
 }
+
+document.querySelector(".datatable thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if (!th) return;
+  if (dt.sort === th.dataset.sort) dt.dir *= -1; else { dt.sort = th.dataset.sort; dt.dir = 1; }
+  renderGoals();
+});
+["dtSearch", "dtCategory", "dtType", "dtStatus"].forEach(id =>
+  $(id).addEventListener(id === "dtSearch" ? "input" : "change", renderGoals));
+
+/* ---------- Themes ---------- */
+const THEMES = ["blossom", "ocean", "forest", "sunshine", "lavender", "midnight"];
+function applyTheme(t) {
+  if (!THEMES.includes(t)) t = "blossom";
+  if (t === "blossom") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("gt-theme", t); } catch (e) {}
+  document.querySelectorAll("[data-theme-pick]").forEach(b => b.classList.toggle("on", b.dataset.themePick === t));
+}
+$("themePicker").addEventListener("click", e => {
+  const b = e.target.closest("[data-theme-pick]");
+  if (!b) return;
+  applyTheme(b.dataset.themePick);
+  if (state) { state.theme = b.dataset.themePick; saveState(); }
+});
+applyTheme((() => { try { return localStorage.getItem("gt-theme"); } catch (e) { return null; } })());
 
 function renderMotivation() {
   const F = focusList(), Q = quoteList(), A = adviceList();
@@ -600,10 +669,20 @@ $("addForm").addEventListener("submit", e => {
     achieved: false, achievedDate: null, createdAt: todayKey(), date
   });
   $("newGoal").value = "";
+  $("newGoal").style.height = "";
   $("newDate").value = "";
   saveState();
   renderAll();
   if (date) setSync(`📌 Added for ${shortDate(date)}`);
+});
+
+/* Goal textarea: Enter adds the goal, Shift+Enter makes a new line, box grows as you type */
+$("newGoal").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("addForm").requestSubmit(); }
+});
+$("newGoal").addEventListener("input", e => {
+  e.target.style.height = "";
+  e.target.style.height = Math.min(e.target.scrollHeight + 2, 160) + "px";
 });
 
 $("goalList").addEventListener("click", e => {

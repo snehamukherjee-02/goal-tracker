@@ -4,9 +4,113 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Goal Tracker</title>
-  <link rel="stylesheet" href="style.css?v=3.7">
+  <script>try { var t = localStorage.getItem("gt-theme"); if (t && t !== "blossom") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <link rel="stylesheet" href="style.css?v=3.8">
 </head>
 <body>
+  <!-- ================= Cartoon background (colours follow the theme) ================= -->
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="scSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="sc-sky1"/><stop offset="1" class="sc-sky2"/>
+        </linearGradient>
+        <symbol id="scFlower" viewBox="-20 -20 40 60" width="40" height="60">
+          <path d="M0 6 V38" class="sc-stem"/>
+          <circle cx="0" cy="-9" r="7" class="sc-petal"/><circle cx="9" cy="-2" r="7" class="sc-petal"/>
+          <circle cx="5" cy="8" r="7" class="sc-petal"/><circle cx="-5" cy="8" r="7" class="sc-petal"/>
+          <circle cx="-9" cy="-2" r="7" class="sc-petal"/><circle cx="0" cy="1" r="5.5" class="sc-sun"/>
+        </symbol>
+        <symbol id="scStar" viewBox="-10 -10 20 20" width="20" height="20">
+          <path d="M0-10 Q1.5-1.5 10 0 Q1.5 1.5 0 10 Q-1.5 1.5-10 0 Q-1.5-1.5 0-10Z" class="sc-spark"/>
+        </symbol>
+        <symbol id="scHeart" viewBox="-12 -11 24 22" width="24" height="22">
+          <path d="M0 9 C-14 0-10-12 0-5 C10-12 14 0 0 9Z" class="sc-heart"/>
+        </symbol>
+      </defs>
+
+      <rect width="1440" height="900" fill="url(#scSky)"/>
+
+      <!-- sparkles -->
+      <g class="sc-twinkle">
+        <use href="#scStar" x="140" y="90"/><use href="#scStar" x="520" y="60" width="14" height="14"/>
+        <use href="#scStar" x="1080" y="70"/><use href="#scStar" x="1330" y="140" width="14" height="14"/>
+      </g>
+      <g class="sc-twinkle sc-delay">
+        <use href="#scStar" x="420" y="250" width="12" height="12"/><use href="#scStar" x="1260" y="330" width="16" height="16"/>
+        <use href="#scStar" x="60" y="300" width="14" height="14"/><use href="#scStar" x="980" y="300" width="12" height="12"/>
+      </g>
+
+      <!-- smiling sun -->
+      <g class="sc-rays">
+        <g class="sc-ray">
+          <path d="M900 112V84"/><path d="M900 308v28"/><path d="M802 210h-28"/><path d="M998 210h28"/>
+          <path d="M831 141l-20-20"/><path d="M969 279l20 20"/><path d="M969 141l20-20"/><path d="M831 279l-20 20"/>
+        </g>
+      </g>
+      <circle cx="900" cy="210" r="72" class="sc-sun"/>
+      <path d="M872 200q8-10 16 0M912 200q8-10 16 0" class="sc-line"/>
+      <ellipse cx="866" cy="224" rx="10" ry="6" class="sc-blush"/><ellipse cx="934" cy="224" rx="10" ry="6" class="sc-blush"/>
+      <path d="M884 230q16 16 32 0" class="sc-line"/>
+
+      <!-- clouds with faces -->
+      <g class="sc-drift">
+        <path d="M230 190a40 40 0 0 1 60-50a55 55 0 0 1 100 10a38 38 0 0 1 20 72H240a35 35 0 0 1-10-32z" class="sc-cloud"/>
+        <circle cx="315" cy="190" r="4" class="sc-ink"/><circle cx="345" cy="190" r="4" class="sc-ink"/>
+        <path d="M322 202q8 7 16 0" class="sc-line thin"/>
+      </g>
+      <g class="sc-drift sc-delay">
+        <path d="M1120 290a34 34 0 0 1 52-42a46 46 0 0 1 84 8a32 32 0 0 1 16 60h-140a30 30 0 0 1-12-26z" class="sc-cloud"/>
+        <circle cx="1192" cy="286" r="3.5" class="sc-ink"/><circle cx="1218" cy="286" r="3.5" class="sc-ink"/>
+        <path d="M1198 296q7 6 14 0" class="sc-line thin"/>
+      </g>
+      <g class="sc-drift sc-slow">
+        <path d="M560 120a26 26 0 0 1 40-32a36 36 0 0 1 64 6a24 24 0 0 1 12 46H570a22 22 0 0 1-10-20z" class="sc-cloud"/>
+      </g>
+
+      <!-- mountain with goal flag -->
+      <path d="M420 900L760 330L1100 900Z" class="sc-mtn"/>
+      <path d="M760 330L702 428Q722 414 738 432Q752 412 768 432Q786 412 818 428Z" class="sc-snow"/>
+      <path d="M760 332V236" class="sc-pole"/>
+      <path class="sc-flag" d="M762 238Q800 236 834 252Q800 266 762 270Z"/>
+      <path d="M786 246l3 6 7 1-5 4 1 7-6-3-6 3 1-7-5-4 7-1z" class="sc-snow"/>
+      <path d="M560 880Q600 760 650 700T720 520T758 360" class="sc-trail"/>
+
+      <!-- hills -->
+      <path d="M0 640Q240 540 520 620T1040 600T1440 560V900H0Z" class="sc-hill1"/>
+      <path d="M0 730Q300 650 640 715T1440 690V900H0Z" class="sc-hill2"/>
+
+      <!-- little climber -->
+      <g class="sc-bounce">
+        <ellipse cx="690" cy="586" rx="26" ry="5" class="sc-shadow"/>
+        <path d="M712 548l20-30" class="sc-limb"/><circle cx="734" cy="514" r="7" class="sc-buddy"/>
+        <path d="M664 556l-16 14" class="sc-limb"/>
+        <ellipse cx="690" cy="552" rx="36" ry="32" class="sc-buddy"/>
+        <circle cx="678" cy="546" r="5" class="sc-ink"/><circle cx="704" cy="546" r="5" class="sc-ink"/>
+        <circle cx="680" cy="544" r="1.8" class="sc-white"/><circle cx="706" cy="544" r="1.8" class="sc-white"/>
+        <ellipse cx="668" cy="560" rx="7" ry="4" class="sc-blush"/><ellipse cx="714" cy="560" rx="7" ry="4" class="sc-blush"/>
+        <path d="M683 560q8 8 16 0" class="sc-line thin"/>
+      </g>
+      <g class="sc-bubble">
+        <rect x="520" y="430" width="150" height="46" rx="23" class="sc-card"/>
+        <path d="M640 474l20 22-2-24z" class="sc-card"/>
+        <text x="595" y="460" text-anchor="middle" class="sc-text">I can do it!</text>
+      </g>
+      <g class="sc-float"><use href="#scHeart" x="740" y="470"/></g>
+      <g class="sc-float sc-delay"><use href="#scHeart" x="610" y="520" width="16" height="15"/></g>
+
+      <!-- front hill, sign and flowers -->
+      <path d="M0 810Q360 735 720 795T1440 770V900H0Z" class="sc-hill3"/>
+      <path d="M190 840V760" class="sc-pole thick"/>
+      <rect x="120" y="728" width="170" height="44" rx="10" class="sc-card"/>
+      <text x="205" y="757" text-anchor="middle" class="sc-text small">Dream big ➜</text>
+      <use href="#scFlower" x="40" y="790"/><use href="#scFlower" x="330" y="770"/>
+      <use href="#scFlower" x="470" y="790" width="30" height="45"/><use href="#scFlower" x="900" y="790"/>
+      <use href="#scFlower" x="1080" y="775" width="30" height="45"/><use href="#scFlower" x="1250" y="765"/>
+      <use href="#scFlower" x="1380" y="770" width="30" height="45"/>
+    </svg>
+  </div>
+
   <!-- ================= Login screen ================= -->
   <section id="authScreen" class="lock">
     <div class="card lock-card">
@@ -87,6 +191,17 @@
       <li><a href="#motivation" data-page="motivation">💖 <span>Motivation</span></a></li>
       <li><a href="#videos"     data-page="videos">🎬 <span>Videos</span></a></li>
     </ul>
+    <div class="theme-box">
+      <div class="small-text sub">🎨 Theme</div>
+      <div class="theme-picker" id="themePicker">
+        <button data-theme-pick="blossom"  title="Blossom"  style="--a:#c2417a;--b:#ffe4ef">🌸</button>
+        <button data-theme-pick="ocean"    title="Ocean"    style="--a:#1c7fa6;--b:#bfe9fb">🌊</button>
+        <button data-theme-pick="forest"   title="Forest"   style="--a:#2f8a4c;--b:#c9ecc0">🌿</button>
+        <button data-theme-pick="sunshine" title="Sunshine" style="--a:#e07a10;--b:#ffe7b8">☀️</button>
+        <button data-theme-pick="lavender" title="Lavender" style="--a:#7b5cd6;--b:#e6defc">💜</button>
+        <button data-theme-pick="midnight" title="Midnight" style="--a:#7aa2ff;--b:#1b2550">🌙</button>
+      </div>
+    </div>
     <div class="drawer-actions">
       <button class="ghost" id="exportBtn" title="Download a backup of your data">💾 Backup</button>
       <label class="ghost file-btn" title="Import goals or restore a backup file">
@@ -158,19 +273,45 @@
       <section class="card">
         <div class="goals-head">
           <h2>My goal list</h2>
-          <span class="hint">Tick the big box when a goal is fully achieved.</span>
+          <span class="hint">Tick the box when a goal is achieved. Add a 📅 date to make a goal for just that day.</span>
         </div>
         <form id="addForm" class="add-form">
-          <input id="newGoal" type="text" placeholder="Add a new goal…" required maxlength="200">
-          <select id="newCategory">
+          <textarea id="newGoal" rows="1" placeholder="Add a new goal…" title="Enter adds the goal · Shift+Enter starts a new line" required maxlength="200"></textarea>
+          <select id="newCategory" aria-label="Category">
             <option>Self</option><option>Love</option><option>Family</option><option>Travel</option>
             <option>Beauty</option><option>Wealth</option><option>Career</option><option>Strength</option>
           </select>
-          <input id="newDate" type="date" class="date-input" title="Optional: pick a date to make this a goal for that day only" aria-label="Only for this date (optional)">
-          <span class="hint date-hint">📅 Optional: pick a date to set the goal for just that day. Leave it empty for a life goal shown every day.</span>
+          <input id="newDate" type="date" class="date-input" title="Optional: pick a date to make this a goal for that day only. Leave empty for a life goal shown every day." aria-label="Only for this date (optional)">
           <button type="submit">Add goal</button>
         </form>
-        <ol class="goal-list" id="goalList"></ol>
+
+        <div class="dt-toolbar">
+          <input id="dtSearch" type="text" placeholder="🔍 Search goals…" aria-label="Search goals">
+          <select id="dtCategory" aria-label="Filter by category"><option value="">All categories</option></select>
+          <select id="dtType" aria-label="Filter by type">
+            <option value="">All goals</option><option value="life">Every day</option><option value="day">One day 📌</option>
+          </select>
+          <select id="dtStatus" aria-label="Filter by status">
+            <option value="">Any status</option><option value="open">In progress</option><option value="done">Achieved ✅</option>
+          </select>
+        </div>
+        <div class="dt-wrap">
+          <table class="datatable">
+            <thead>
+              <tr>
+                <th data-sort="order" class="col-num">#</th>
+                <th class="col-check" title="Achieved">✓</th>
+                <th data-sort="title">Goal</th>
+                <th data-sort="category">Category</th>
+                <th data-sort="date">When</th>
+                <th data-sort="progress">Progress</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="goalList"></tbody>
+          </table>
+        </div>
+        <p class="dt-count hint" id="dtCount"></p>
       </section>
     </div>
 
@@ -207,7 +348,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-  <script src="config.js?v=3.7"></script>
-  <script src="app.js?v=3.7"></script>
+  <script src="config.js?v=3.8"></script>
+  <script src="app.js?v=3.8"></script>
 </body>
 </html>
